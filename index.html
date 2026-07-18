@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Why Behind Fine-Tuning — First Principles, Every Symbol Explained</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --ink: #1a1a1a;
+    --muted: #555;
+    --accent: #b34a2c;
+    --rule: #d9d4c5;
+    --code-bg: #f0ede4;
+    --note-bg: #fff7e6;
+    --note-border: #e8b96b;
+    --math-bg: #f5f2ea;
+    --why-bg: #eef1f7;
+    --why-border: #6a7da8;
+    --change-bg: #f5e6d3;
+    --change-border: #c08344;
+    --max: 780px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Charter", "Iowan Old Style", Georgia, "Times New Roman", serif;
+    font-size: 18px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: var(--max); margin: 0 auto; padding: 56px 28px 120px; }
+  h1 {
+    font-family: "Iowan Old Style", "Charter", Georgia, serif;
+    font-size: 2.3rem; line-height: 1.2; margin: 0 0 6px;
+    font-weight: 700; letter-spacing: -0.01em;
+  }
+  h2 {
+    font-family: "Iowan Old Style", "Charter", Georgia, serif;
+    font-size: 1.65rem; margin: 68px 0 18px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--ink); line-height: 1.25;
+  }
+  h3 { font-size: 1.22rem; margin: 38px 0 12px; font-weight: 700; }
+  h4 {
+    font-size: 0.95rem; margin: 26px 0 8px; font-weight: 700;
+    color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  }
+  .subtitle {
+    color: var(--muted); font-size: 1.05rem; font-style: italic;
+    margin: 0 0 44px; padding-bottom: 28px; border-bottom: 1px solid var(--rule);
+  }
+  p { margin: 14px 0; }
+  strong { font-weight: 700; }
+  code {
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.86em;
+  }
+  pre {
+    background: var(--code-bg); padding: 16px 18px; border-radius: 6px;
+    overflow-x: auto; font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.84em; line-height: 1.5; border-left: 3px solid var(--accent);
+  }
+  pre code { background: none; padding: 0; }
+
+  .why {
+    background: var(--why-bg); border-left: 3px solid var(--why-border);
+    padding: 14px 22px; margin: 22px 0; font-size: 0.97em;
+  }
+  .why::before {
+    content: "Why does this exist?"; display: block;
+    font-family: "Inter", sans-serif; font-size: 0.78em; font-weight: 700;
+    color: #3d4d75; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+  }
+  .change {
+    background: var(--change-bg); border-left: 3px solid var(--change-border);
+    padding: 14px 22px; margin: 22px 0; font-size: 0.97em;
+  }
+  .change::before {
+    content: "What if we changed it?"; display: block;
+    font-family: "Inter", sans-serif; font-size: 0.78em; font-weight: 700;
+    color: #7a4f1d; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+  }
+  .intuition {
+    background: #ebf4ed; border-left: 3px solid #5a8a64;
+    padding: 14px 22px; margin: 22px 0; font-size: 0.97em;
+  }
+  .intuition::before {
+    content: "Intuition"; display: block;
+    font-family: "Inter", sans-serif; font-size: 0.78em; font-weight: 700;
+    color: #3d6647; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+  }
+  .meaning {
+    background: #f4ecf2; border-left: 3px solid #8a5a7a;
+    padding: 14px 22px; margin: 22px 0; font-size: 0.97em;
+  }
+  .meaning::before {
+    content: "What every symbol means"; display: block;
+    font-family: "Inter", sans-serif; font-size: 0.78em; font-weight: 700;
+    color: #6a3d5a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+  }
+
+  .math-block {
+    background: var(--math-bg); padding: 14px 18px; border-radius: 4px;
+    margin: 18px 0; overflow-x: auto;
+  }
+  ul, ol { margin: 14px 0; padding-left: 26px; }
+  li { margin: 6px 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 0.92em;
+  }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    background: var(--code-bg); font-family: "Inter", sans-serif;
+    font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .toc {
+    background: #f5f2ea; padding: 22px 28px; border-radius: 6px;
+    margin: 26px 0 50px; font-size: 0.95em;
+  }
+  .toc h3 {
+    margin-top: 0; font-size: 0.95rem; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted);
+    font-family: "Inter", sans-serif; font-weight: 700;
+  }
+  .part-marker {
+    font-family: "Inter", sans-serif; font-size: 0.78em; font-weight: 700;
+    color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em;
+    margin-top: 78px; padding-top: 28px; border-top: 1px dashed var(--rule);
+  }
+  .part-marker + h2 { margin-top: 8px; border-bottom: none; padding-bottom: 0; }
+  hr { border: none; border-top: 1px solid var(--rule); margin: 48px 0; }
+  .footer {
+    margin-top: 90px; padding-top: 28px; border-top: 1px solid var(--rule);
+    color: var(--muted); font-size: 0.9em; font-style: italic;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>The Why Behind Fine-Tuning</h1>
+<p class="subtitle">A first-principles companion to the Complete Guide. Every formula explained term by term. Every hyperparameter dissected. For each thing: what problem it solves, and what breaks if you change it.</p>
+
+<div class="toc">
+<h3>How to read this</h3>
+<p>Every concept follows the same pattern: a plain-English explanation first, then the formula, then a box explaining what every symbol means, then a box about why this particular form was chosen, then a box about what happens if you change parts of it. If you only read the colored boxes, you'll still understand 80% of fine-tuning.</p>
+</div>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 0</div>
+<h2>0. The absolute basics — what is a "parameter," "training," "loss"?</h2>
+
+<p>Before any formula, let's name the pieces, because every page of this document will use these terms.</p>
+
+<h3>0.1 What is a parameter?</h3>
+
+<p>A neural network is just a giant function. You give it an input, it gives you an output. The function has billions of <strong>knobs</strong> inside it — numbers that determine what it does. Each knob is a <em>parameter</em>. A "7B model" has 7 billion such knobs. A "70B model" has 70 billion.</p>
+
+<p>Each parameter is just a single floating-point number, like <code>0.0312</code> or <code>-1.7724</code>. The collection of all these numbers is what gets saved to disk when you "download a model." The Llama-3-8B weights file is about 16 GB — that's 8 billion numbers stored as 16-bit floats.</p>
+
+<div class="intuition">
+A pretrained LLM is like an enormous mixing board with 8 billion sliders. Each slider has been set, very carefully, during pretraining (which cost millions of dollars and burned terabytes of text data). Inference is pushing audio through the mixing board with the sliders fixed. Fine-tuning is going in and turning the sliders.
+</div>
+
+<h3>0.2 What is training? What is a "loss"?</h3>
+
+<p>Training means: <strong>repeatedly adjust the knobs to make the model less wrong</strong>. You need three things:</p>
+
+<ol>
+  <li>A dataset of (input, desired-output) pairs. Example: input = "Translate to French: Hello", desired output = "Bonjour".</li>
+  <li>A <strong>loss function</strong> $\mathcal{L}$ — a number that says "how wrong was the model on this example?" Smaller loss = closer to the truth.</li>
+  <li>An <strong>optimizer</strong> (usually AdamW) that uses calculus to figure out which direction to nudge each knob to make the loss smaller.</li>
+</ol>
+
+<p>For language models, the loss is almost always <strong>cross-entropy</strong> on the next token:</p>
+
+<div class="math-block">
+$$\mathcal{L} = -\sum_{t} \log P_\theta(\text{correct token}_t \mid \text{previous tokens})$$
+</div>
+
+<div class="meaning">
+$P_\theta$ is "the probability the model with parameters $\theta$ assigns." $-\log P$ is large when the model gave the correct token a small probability, and tiny when the model assigned high probability to the right answer. Sum over all positions in the sequence and you have one number to minimize.
+</div>
+
+<div class="why">
+Why <em>log</em>? Two reasons. (1) Mathematically, log-probability adds across independent tokens, while raw probability multiplies and rapidly underflows to zero for long sequences. (2) Log makes the gradient nicely behaved — the gradient of $-\log P$ is large when $P$ is small (so the model gets a big nudge when it's very wrong) and tiny when $P$ is close to 1 (small nudge when nearly right).
+</div>
+
+<div class="change">
+If you used $-P$ instead of $-\log P$: the loss would still be smaller for higher $P$, but a model that's 99% confident and one that's 99.99% confident would get nearly identical gradients. With $-\log P$, the latter case gives a much smaller gradient, which is correct — you don't need to push hard when the model is already nearly right.
+</div>
+
+<h3>0.3 What is "gradient descent"?</h3>
+
+<p>Calculus tells you, for any knob $\theta_i$, what direction nudging it would move the loss. That signed nudge is the <em>gradient</em>, written $\frac{\partial \mathcal{L}}{\partial \theta_i}$. The update rule (simplified) is:</p>
+
+<div class="math-block">
+$$\theta_i \leftarrow \theta_i - \eta \cdot \frac{\partial \mathcal{L}}{\partial \theta_i}$$
+</div>
+
+<div class="meaning">
+$\eta$ (Greek letter "eta") is the <strong>learning rate</strong>. It's the step size. The minus sign is because gradient points <em>uphill</em> on loss and you want to walk <em>downhill</em>. Do this trillion times per parameter and you've trained a model.
+</div>
+
+<div class="why">
+A learning rate exists because the gradient only tells you a <em>direction</em>, not how far to move. Move too far and you overshoot the valley; move too little and you'll never get there.
+</div>
+
+<div class="change">
+If $\eta$ is too large: loss spikes, training diverges (you see <code>NaN</code> losses). If too small: the loss decreases but achingly slowly, and you may stop training before convergence. Picking $\eta$ is the single most consequential hyperparameter choice. We will come back to it many times.
+</div>
+
+<h3>0.4 What is "fine-tuning" vs. "pretraining"?</h3>
+
+<p><strong>Pretraining</strong>: start from totally random knob positions, train on trillions of tokens of internet text with next-token prediction. Outcome: a model that knows grammar, facts, basic reasoning, code — a general-purpose engine. Costs millions of dollars.</p>
+
+<p><strong>Fine-tuning</strong>: start from a pretrained model. Continue training, but on a small task-specific dataset, usually for far fewer steps. Outcome: a model that's better at <em>your</em> task — answering customer questions in your company's style, doing legal summarization, writing code in a particular framework. Costs hundreds of dollars to thousands.</p>
+
+<div class="why">
+Pretraining is too expensive to repeat. Fine-tuning lets us reuse the expensive pretrained knob positions as a starting point and only do the cheap last-mile adjustment for our task. The cleverness of LoRA, QLoRA, GRPO, etc. is all about making fine-tuning even cheaper and more reliable.
+</div>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 1</div>
+<h2>1. From words to vectors — what an "embedding" actually is</h2>
+
+<p>You can't do calculus on the word "cat." You can do calculus on numbers. So step one of every LLM is turning text into numbers.</p>
+
+<h3>1.1 Tokens and vocabulary</h3>
+
+<p>Text is first split into <strong>tokens</strong> by a tokenizer. Tokens are usually subword chunks: "unhappiness" becomes <code>["un", "happiness"]</code> or <code>["un", "happy", "ness"]</code> depending on the tokenizer. A model has a fixed <strong>vocabulary</strong> — Llama 3's is 128,256 tokens. Every input token is just an integer ID from 0 to 128,255.</p>
+
+<h3>1.2 The embedding table</h3>
+
+<p>The first layer of a transformer is a giant lookup table: <strong>embedding matrix</strong> $E \in \mathbb{R}^{V \times d_{\text{model}}}$, where $V$ is vocabulary size and $d_{\text{model}}$ is the model's hidden dimension (e.g., 4096). Row $i$ is the vector for token $i$.</p>
+
+<div class="math-block">
+$$x_t = E[\text{token\_id}_t]$$
+</div>
+
+<div class="meaning">
+$x_t \in \mathbb{R}^{4096}$ is a vector of 4096 numbers. Every token in the vocabulary has a learned 4096-dimensional vector. These vectors are <em>learned</em> during pretraining — they aren't hand-designed.
+</div>
+
+<div class="why">
+Why high-dimensional? Because language has many independent dimensions of meaning — sentiment, formality, topic, plurality, tense, register, named-entity-or-not, code-or-prose, and thousands more. One dimension cannot capture all of these; you need a wide vector where different directions encode different aspects.
+</div>
+
+<div class="intuition">
+A famous result with old word embeddings was: vector("king") − vector("man") + vector("woman") ≈ vector("queen"). The vectors organize themselves into geometric relationships that reflect meaning. Modern transformer embeddings are richer but the principle is the same: similar meanings → nearby vectors.
+</div>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 2</div>
+<h2>2. Attention — the formula, term by term, fear-free</h2>
+
+<h3>2.1 The problem attention solves</h3>
+
+<p>You're reading: <em>"The lawyer who Maria hired won the case because she had prepared thoroughly."</em> Who is "she"? You scan back through the sentence, ask "what could 'she' refer to?", weigh "lawyer" against "Maria", and pick. That weighing of distant words is the operation attention performs, but inside the neural network, in parallel, for every token at once.</p>
+
+<p>Before attention, recurrent networks (RNNs) processed text left-to-right and squeezed history into a single hidden state. Distant context degraded. Attention is a way to let every token <em>directly</em> consult every other token in one step, with learned weights.</p>
+
+<h3>2.2 Three roles per token: Query, Key, Value</h3>
+
+<p>For each token, the model produces three different vectors from the same input:</p>
+
+<table>
+<thead><tr><th>Role</th><th>Mental model</th><th>Used for</th></tr></thead>
+<tbody>
+<tr><td>Query (Q)</td><td>"What information am I looking for?"</td><td>This token's own search request</td></tr>
+<tr><td>Key (K)</td><td>"What information do I advertise?"</td><td>What another token offers when matched</td></tr>
+<tr><td>Value (V)</td><td>"What payload do I carry?"</td><td>The content actually mixed in</td></tr>
+</tbody>
+</table>
+
+<div class="intuition">
+Imagine a room of 10 people. Each holds up two signs: one says "I'm asking about X" (their query), the other says "I know about Y" (their key). They look around, see whose key matches their query, and copy notes from those people (the value). Attention does this with learned vectors instead of text labels.
+</div>
+
+<div class="why">
+Why three separate vectors instead of one? Because what you <em>need to find</em> and what you <em>advertise</em> are not the same. A pronoun "she" needs to find an antecedent (query: "looking for a female noun nearby"). The word "lawyer" advertises "I am a profession, animate, can be female" (key). The actual <em>content</em> mixed into "she"'s representation — like which lawyer specifically, including her actions — is different again (value). Separating Q, K, V lets the model learn these three roles independently.
+</div>
+
+<h3>2.3 Producing Q, K, V</h3>
+
+<p>You take the input embeddings $X \in \mathbb{R}^{n \times d}$ (a stack of $n$ token vectors, each of dimension $d$). You apply three learned weight matrices:</p>
+
+<div class="math-block">
+$$Q = X W_Q, \quad K = X W_K, \quad V = X W_V$$
+</div>
+
+<div class="meaning">
+$W_Q, W_K, W_V \in \mathbb{R}^{d \times d_k}$ are three independent weight matrices. They're <em>learned</em> during pretraining. Each takes a $d$-dimensional input vector and produces a $d_k$-dimensional output vector. $Q$, $K$, $V$ are each matrices of shape $n \times d_k$ — one $d_k$-vector per token. These matrices, in HuggingFace's Llama code, are named <code>q_proj</code>, <code>k_proj</code>, <code>v_proj</code>. That's exactly where those names in <code>target_modules</code> come from.
+</div>
+
+<div class="change">
+If we used the <em>same</em> matrix for Q and K (i.e., $W_Q = W_K$): then a token's query and key would be identical, and the dot product $Q K^\top$ would just be self-similarities. The model would mostly attend to itself. Empirically: bad. Modern models always learn Q and K separately.
+</div>
+
+<h3>2.4 The dot-product score: $QK^\top$</h3>
+
+<p>Now we compute how much every query matches every key:</p>
+
+<div class="math-block">
+$$S = Q K^\top \in \mathbb{R}^{n \times n}$$
+</div>
+
+<div class="meaning">
+$S_{ij}$ is the dot product of query vector $i$ with key vector $j$. The dot product $\mathbf{q} \cdot \mathbf{k} = \sum_l q_l k_l$ is large when $\mathbf{q}$ and $\mathbf{k}$ point in similar directions, near zero when they're perpendicular, large-negative when opposite. So $S_{ij}$ measures "how relevant is token $j$ to token $i$'s query?"
+</div>
+
+<div class="why">
+Why dot product specifically? Because it's the simplest learnable similarity. The model's weights learn what makes two vectors "similar enough" for a strong attention link. Cosine similarity would work too but requires normalization; dot product is cheaper and just as effective once $W_Q, W_K$ have been trained.
+</div>
+
+<h3>2.5 The scale: $\sqrt{d_k}$</h3>
+
+<p>Divide $S$ by $\sqrt{d_k}$:</p>
+
+<div class="math-block">
+$$S' = \frac{QK^\top}{\sqrt{d_k}}$$
+</div>
+
+<div class="why">
+Why divide? Imagine $\mathbf{q}$ and $\mathbf{k}$ are each $d_k$-dimensional vectors whose entries are independent with variance 1. Their dot product $\sum_l q_l k_l$ is a sum of $d_k$ random terms each with variance 1, so the sum has variance $d_k$ and standard deviation $\sqrt{d_k}$. So dot products grow in magnitude with $d_k$. With $d_k = 128$, raw scores could be 10-20 in magnitude. With $d_k = 4096$ (no multi-head split), they'd be in the 50s. Dividing by $\sqrt{d_k}$ normalizes this back to standard deviation ~1.
+</div>
+
+<div class="change">
+What if we skipped the division? Without it, large $d_k$ values produce huge attention scores. After softmax, almost all probability piles onto a single token (because $e^{20}$ vs $e^{19}$ is a factor of $e$ — extreme winner-take-all). Then gradients through softmax become near-zero (saturation), and training stalls. The $\sqrt{d_k}$ scaling keeps softmax inputs in a reasonable range so gradients flow.
+</div>
+
+<div class="change">
+What if we divided by $d_k$ instead of $\sqrt{d_k}$? Scores would become too small, softmax would be too flat (close to uniform), and the model couldn't focus attention sharply. $\sqrt{d_k}$ is the Goldilocks rate determined by the variance argument above.
+</div>
+
+<h3>2.6 Softmax — turning scores into weights</h3>
+
+<p>Apply softmax along each row of $S'$:</p>
+
+<div class="math-block">
+$$A_{ij} = \frac{\exp(S'_{ij})}{\sum_{j'} \exp(S'_{ij'})}$$
+</div>
+
+<div class="meaning">
+For each row $i$ (token $i$'s view of the world), $\{A_{ij}\}_j$ is a probability distribution over all other tokens summing to 1. $A_{ij}$ is "the fraction of attention token $i$ pays to token $j$."
+</div>
+
+<div class="why">
+We need attention weights to (a) be non-negative — you can't pay -3% attention — and (b) sum to 1 — total attention is a budget. Softmax is the standard way to convert arbitrary real numbers into a probability distribution while preserving their order: larger inputs get larger outputs, and the conversion is differentiable everywhere.
+</div>
+
+<div class="change">
+If we just normalized (divided by sum without exponentiating): negative scores would become "negative attention," which is meaningless. If we used ReLU then normalized: it would work, but ReLU's hard zero means many tokens have <em>exactly</em> zero attention, and gradients can't flow through them — softmax is "soft" precisely because every token still gets some attention, however small, so gradients can adjust during training.
+</div>
+
+<h3>2.7 Mixing values: $AV$</h3>
+
+<p>Finally, use the weights to mix values:</p>
+
+<div class="math-block">
+$$\text{output} = A V$$
+</div>
+
+<div class="meaning">
+For token $i$, the output is $\sum_j A_{ij} V_j$ — a weighted average of all value vectors, with weights from token $i$'s attention distribution. Token $i$'s new representation has "absorbed" content from the tokens it attended to most.
+</div>
+
+<h3>2.8 The full formula, decoded</h3>
+
+<div class="math-block">
+$$\text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V$$
+</div>
+
+<p>Read it now in plain English: "Compute how much each query matches each key (dot product), shrink so softmax behaves (divide by $\sqrt{d_k}$), convert to probabilities (softmax), then mix values by those probabilities."</p>
+
+<h3>2.9 Multi-head attention — why multiple heads?</h3>
+
+<p>One attention computation captures one kind of relationship. Real language has many kinds happening at once: coreference, syntax, topic-tracking, register, etc. Solution: do attention <em>multiple times in parallel</em> with different learned weights, each capturing different relationships. Each parallel computation is a "head."</p>
+
+<div class="math-block">
+$$\text{MultiHead}(X) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h) W_O$$
+$$\text{head}_i = \text{Attention}(X W_Q^{(i)}, X W_K^{(i)}, X W_V^{(i)})$$
+</div>
+
+<div class="meaning">
+If $d_{\text{model}} = 4096$ and you use $h = 32$ heads, each head's $d_k = 4096/32 = 128$. Each head learns its own $W_Q^{(i)}, W_K^{(i)}, W_V^{(i)}$. After all heads finish, their outputs (each of dim 128) are concatenated back to a 4096-vector. Then a single learned matrix $W_O$ projects this back to dimension $d_{\text{model}}$. That $W_O$ is what HuggingFace calls <code>o_proj</code> — that's where the "o_proj" in target_modules comes from.
+</div>
+
+<div class="why">
+Why split the dimension across heads instead of running $h$ full-dimensional attentions? Cost. $h$ full attentions would be $h$ times as expensive. Splitting keeps total cost the same as a single big attention but lets different heads specialize. Empirically, different heads do learn different things: one might track subject-verb agreement, another tracks pronoun antecedents, etc.
+</div>
+
+<div class="change">
+If $h = 1$ (just one head, full-dimensional): you lose the ability to attend to different "kinds" of context in parallel. Empirically performs worse than multi-head at the same parameter count. If $h$ is too large (each head too thin, $d_k < 32$ or so): each head loses expressivity. The standard $d_k = 64$ or $128$ is a sweet spot.
+</div>
+
+<h3>2.10 The causal mask — why the model can't peek at the future</h3>
+
+<p>If you're predicting the next token, you can't be allowed to look at it during training. So before softmax we add a mask: $S'_{ij} = -\infty$ for all $j > i$. After softmax, $A_{ij} = 0$ for future positions.</p>
+
+<div class="why">
+Without the causal mask, the model would learn to cheat: predict token $t$ by simply attending heavily to token $t$ itself (which is what it's trying to predict). Useless model. The mask forces it to actually predict from context.
+</div>
+
+<h3>2.11 Quick worked example</h3>
+
+<p>Suppose $n=3$ tokens and $d_k = 2$. After computing $Q, K, V$:</p>
+
+<pre><code>Q = [[1, 0], [0, 1], [1, 1]]      # 3 query vectors
+K = [[1, 0], [0, 1], [1, 1]]      # 3 key vectors
+V = [[10, 0], [0, 10], [5, 5]]    # 3 value vectors
+
+QK^T  = [[1, 0, 1],
+         [0, 1, 1],
+         [1, 1, 2]]
+
+QK^T / sqrt(2)  =  ~[[0.71, 0, 0.71],
+                     [0, 0.71, 0.71],
+                     [0.71, 0.71, 1.41]]
+
+After softmax per row (ignoring causal mask for clarity):
+A ≈ [[0.42, 0.20, 0.38],
+     [0.20, 0.42, 0.38],
+     [0.21, 0.21, 0.58]]
+
+Output = A @ V:
+row 0:  0.42*[10,0] + 0.20*[0,10] + 0.38*[5,5] = [6.1, 3.9]
+row 1:  0.20*[10,0] + 0.42*[0,10] + 0.38*[5,5] = [3.9, 6.1]
+row 2:  0.21*[10,0] + 0.21*[0,10] + 0.58*[5,5] = [5.0, 5.0]</code></pre>
+
+<p>You can see token 3 (whose Q matches both K's strongly) ended up with a balanced mix; token 1's output is pulled toward V's that matched its Q most.</p>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 3</div>
+<h2>3. The full transformer block — and why every piece is there</h2>
+
+<p>A transformer block is two sublayers: attention, then a feed-forward network (MLP). Each has a residual connection and a normalization. Let's go piece by piece.</p>
+
+<h3>3.1 The structure</h3>
+
+<pre><code># Pre-norm transformer block (modern style)
+x = x + Attention(LayerNorm(x))
+x = x + MLP(LayerNorm(x))</code></pre>
+
+<h3>3.2 Residual connections (the "+ x" parts)</h3>
+
+<div class="why">
+A deep network has many layers. If each layer fully replaces its input, signal and gradient have to survive the chain. Deep networks without skip connections train poorly — gradients vanish or explode. The residual ($y = f(x) + x$) lets the gradient flow through the $+x$ path no matter how messy $f$'s gradient is. It also lets each layer learn a small <em>correction</em> rather than an entire transformation, which is easier.
+</div>
+
+<div class="change">
+Remove residuals and a 32-layer transformer trains terribly (or not at all). Every modern architecture, vision or language, uses residual connections.
+</div>
+
+<h3>3.3 Layer normalization (the "LayerNorm" / "RMSNorm")</h3>
+
+<p>Inside each block, before the operation, normalize each token vector to have mean 0 and unit variance (LayerNorm) or just unit RMS (RMSNorm — Llama's choice):</p>
+
+<div class="math-block">
+$$\text{LayerNorm}(x) = \frac{x - \mu(x)}{\sigma(x)} \cdot \gamma + \beta$$
+</div>
+
+<div class="meaning">
+$\mu$ and $\sigma$ are computed per token vector. $\gamma, \beta$ are learned per-dimension scaling and shifting. Outputs are well-behaved regardless of the magnitude of inputs.
+</div>
+
+<div class="why">
+Without normalization, the variance of activations can blow up or vanish as you go deeper through layers. Gradients become unstable. LayerNorm enforces a clean signal scale at every layer. It also makes training robust to learning rate choice.
+</div>
+
+<div class="change">
+Llama uses RMSNorm (no mean subtraction, no $\beta$). It's slightly cheaper and works equally well. The difference matters at scale; at our level it's the same idea.
+</div>
+
+<h3>3.4 The MLP (feed-forward network) — and why SwiGLU</h3>
+
+<p>After attention, every token is sent through a small neural net independently. The classical transformer used:</p>
+
+<div class="math-block">
+$$\text{MLP}(x) = \text{ReLU}(x W_1) W_2$$
+</div>
+
+<p>Modern LLMs use <strong>SwiGLU</strong>:</p>
+
+<div class="math-block">
+$$\text{SwiGLU}(x) = \big(\text{SiLU}(x W_{\text{gate}}) \odot (x W_{\text{up}})\big) W_{\text{down}}$$
+</div>
+
+<div class="meaning">
+Three matrices instead of two. $W_{\text{gate}}$ and $W_{\text{up}}$ both project up from $d_{\text{model}}$ (e.g., 4096) to a wider hidden dimension (e.g., 11008). One branch goes through SiLU (a smooth ReLU-ish activation), the other doesn't. They're multiplied <em>element-wise</em> ($\odot$). $W_{\text{down}}$ projects back to $d_{\text{model}}$.
+</div>
+
+<div class="why">
+Why three matrices instead of two? The gating mechanism — multiplying two branches — gives the MLP a form of <em>multiplicative</em> interaction, which is more expressive than pure addition. The SiLU-gated branch lets the model learn "let this through if relevant, suppress if not" per dimension. Empirically, SwiGLU outperforms ReLU MLPs at the same compute. PaLM showed this first; Llama adopted it.
+</div>
+
+<div class="why">
+Why is the hidden dimension wider than $d_{\text{model}}$? The MLP is where most "knowledge storage" in a transformer happens (research on this is ongoing, but neuron-storage-of-facts is well documented). Wider = more room to memorize patterns. Llama uses roughly $\frac{8}{3} d_{\text{model}}$ as the hidden dimension for SwiGLU.
+</div>
+
+<p>The three matrices <code>gate_proj</code>, <code>up_proj</code>, <code>down_proj</code> are exactly what completes your seven-name <code>target_modules</code> list.</p>
+
+<h3>3.5 Stacking blocks</h3>
+
+<p>An LLM stacks 32 (7B), 80 (70B), or 128+ such blocks. The same operations apply at each layer; later layers see increasingly abstracted representations.</p>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 4</div>
+<h2>4. Fine-tuning — what changes, what doesn't</h2>
+
+<h3>4.1 The unit operation: a gradient step</h3>
+
+<p>Fine-tuning is the same algorithm as pretraining (gradient descent on cross-entropy), with three differences:</p>
+
+<ul>
+  <li>Starting point: pretrained weights, not random.</li>
+  <li>Data: your task-specific dataset, much smaller.</li>
+  <li>Steps: thousands, not trillions.</li>
+</ul>
+
+<h3>4.2 Why does fine-tuning work at all?</h3>
+
+<div class="why">
+A pretrained model has already learned the building blocks of language: grammar, world knowledge, reasoning fragments. Your task usually requires a particular <em>arrangement</em> or <em>emphasis</em> of these, not new building blocks. So a few thousand gradient steps suffice — you're nudging the existing knob positions a small amount, not finding them from scratch.
+</div>
+
+<h3>4.3 Why we worry about catastrophic forgetting</h3>
+
+<p>If you fine-tune aggressively on a narrow dataset, the model can <em>forget</em> general skills it had. The knobs drift toward optima for your dataset, leaving the original optima. This is "catastrophic forgetting."</p>
+
+<div class="change">
+If you fine-tune Llama on just legal contracts for 10,000 steps at high LR: you might get a model that's great on contracts but suddenly bad at general chat. Mitigations: use low LR, train for few epochs, mix in some general data, or use PEFT (LoRA) which by limiting capacity preserves more of the base.
+</div>
+
+<h3>4.4 Full fine-tuning vs PEFT — the memory math</h3>
+
+<p>For a 7B model in mixed-precision (bf16) training with AdamW:</p>
+
+<ul>
+  <li>Model weights: 7B × 2 bytes (bf16) = 14 GB</li>
+  <li>Gradients: 7B × 2 bytes = 14 GB</li>
+  <li>Optimizer states (AdamW has 2 moments per parameter, fp32): 7B × 8 bytes = 56 GB</li>
+  <li>Activations (forward pass cache for backprop): ~10-20 GB depending on seq length</li>
+  <li><strong>Total: ~95 GB</strong> for a 7B model in full fine-tuning</li>
+</ul>
+
+<p>That's a multi-GPU setup. LoRA changes this picture dramatically.</p>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 5</div>
+<h2>5. LoRA — every symbol explained</h2>
+
+<h3>5.1 The setup again</h3>
+
+<p>You have a pretrained weight matrix $W \in \mathbb{R}^{d \times k}$. (For attention's <code>q_proj</code> in Llama-7B, $W$ is $4096 \times 4096$ — about 16.8 million parameters.) Fine-tuning would change it to $W + \Delta W$. LoRA's bet: <strong>$\Delta W$ has low rank</strong>.</p>
+
+<h3>5.2 What does "low rank" actually mean?</h3>
+
+<p>The <strong>rank</strong> of a matrix is the number of linearly independent directions of variation it contains. A rank-1 matrix is a single outer product $\mathbf{b}\mathbf{a}^\top$ — every column is a scalar multiple of $\mathbf{b}$. A rank-$r$ matrix can be written as a sum of $r$ such outer products, equivalently as a product of two skinny matrices:</p>
+
+<div class="math-block">
+$$\Delta W_{d \times k} = B_{d \times r} \cdot A_{r \times k} \quad \text{where } r \ll \min(d, k)$$
+</div>
+
+<div class="meaning">
+$A \in \mathbb{R}^{r \times k}$ projects from $k$-dim input down to $r$-dim "bottleneck." $B \in \mathbb{R}^{d \times r}$ projects back up from the $r$-dim bottleneck to $d$-dim output. Together, $BA$ is a $d \times k$ matrix that can only ever have rank at most $r$.
+</div>
+
+<div class="why">
+Why low-rank? Empirical observation: when you fine-tune a model fully and look at how much $\Delta W$ actually changes, it turns out to live in a very low-dimensional subspace. You don't need 16.8M new parameters per matrix — you need maybe a few hundred or a few thousand effective directions. Forcing $\Delta W = BA$ with small $r$ doesn't lose much expressivity in practice, and saves enormous parameters and memory.
+</div>
+
+<h3>5.3 The LoRA forward equation</h3>
+
+<div class="math-block">
+$$h = Wx + \frac{\alpha}{r} BA\, x$$
+</div>
+
+<div class="meaning">
+$x$ is the input vector (e.g., 4096-dim). $W$ is the frozen pretrained matrix. $A, B$ are the trainable LoRA factors. $\alpha$ (alpha) is a scalar hyperparameter — the "amplification" applied to the LoRA branch. $r$ is the rank you chose.
+</div>
+
+<h3>5.4 Why initialize $B = 0$ but $A$ randomly?</h3>
+
+<div class="why">
+At the very first forward pass, you want the model to behave exactly like the pretrained model — otherwise the loss might immediately spike and the first gradients are misleading. With $B = 0$, the LoRA contribution $BAx = 0$, regardless of $A$. So training starts <em>from the pretrained model exactly</em>. As soon as gradients flow, $B$ starts moving away from zero, and the adapter kicks in. If we initialized both $A$ and $B$ randomly, the model would start in some random vicinity of the base — bad for stability.
+</div>
+
+<div class="change">
+If we initialized both to zero: gradients of $A$ depend on $B$ and vice versa via the chain rule. Both being zero would freeze training of both. The "random $A$, zero $B$" asymmetry breaks the symmetry while still starting at $\Delta W = 0$.
+</div>
+
+<h3>5.5 The $\alpha / r$ scaling — and what happens if you change it</h3>
+
+<div class="why">
+Without the scaling, as you increase $r$, the magnitude of $BA$ grows too (more terms in its sum). That means changing $r$ implicitly changes how big each gradient update is, forcing you to re-tune learning rate every time you change $r$. With the $\alpha/r$ scaling, you can change $r$ from 8 to 64 without re-tuning the learning rate. $\alpha$ becomes the "effective learning rate scale on the LoRA branch."
+</div>
+
+<div class="change">
+If $\alpha$ is too small (say $\alpha = 1, r = 64$): the LoRA branch is heavily downscaled, and adapter updates barely affect the model. Training will be slow, final quality limited. If $\alpha$ is too large (say $\alpha = 256, r = 8$): updates are amplified 32×, can cause instability, gradient explosions, or rapid overfitting. Common practice: $\alpha = r$ (scale factor 1) or $\alpha = 2r$ (gentle 2× amplification). Sweep if you're not sure.
+</div>
+
+<h3>5.6 Choosing $r$ — what each value means</h3>
+
+<table>
+<thead><tr><th>r</th><th>Effect</th><th>When to use</th></tr></thead>
+<tbody>
+<tr><td>2 – 4</td><td>Very small adapter. Sufficient for very narrow tasks (style, format).</td><td>Cheapest experiments.</td></tr>
+<tr><td>8</td><td>Default in most tutorials. Works for many tasks.</td><td>First try.</td></tr>
+<tr><td>16 – 32</td><td>More capacity. Often best for substantive tasks.</td><td>Reasoning, code, domain-specific instruct.</td></tr>
+<tr><td>64 – 128</td><td>High capacity. Diminishing returns above this.</td><td>QLoRA paper used $r=64$. Heavy domain shift.</td></tr>
+<tr><td>&gt; 256</td><td>Approaches full fine-tuning cost; usually not worth it.</td><td>Almost never.</td></tr>
+</tbody>
+</table>
+
+<div class="change">
+What if $r = 1$? Each $\Delta W$ can only encode one "direction" of update. Surprisingly, this works for very narrow tasks (sentiment, style) but breaks down on anything complex. What if $r$ equals the full rank? Then LoRA has the same expressivity as full fine-tuning. But you pay the same memory cost, and there's no benefit over just training $W$ directly.
+</div>
+
+<h3>5.7 LoRA dropout — what it is and what changing it does</h3>
+
+<p>LoRA optionally applies dropout to the input of the LoRA branch:</p>
+
+<div class="math-block">
+$$h = Wx + \frac{\alpha}{r} BA \cdot \text{Dropout}(x, p)$$
+</div>
+
+<div class="meaning">
+With probability $p$, each entry of $x$ entering the LoRA branch is zeroed out (and the rest scaled to compensate). The frozen branch $Wx$ is untouched.
+</div>
+
+<div class="why">
+Dropout is a regularizer. With small fine-tuning datasets and an expressive adapter, the model can overfit (memorize the train set, generalize poorly). Dropout makes the adapter robust to missing input signals, reducing overfitting.
+</div>
+
+<div class="change">
+$p = 0$: no regularization, adapter is fully responsive. Good if you have lots of data or aren't overfitting. $p = 0.05$ to $0.1$: mild regularization, standard for small fine-tuning datasets. $p > 0.2$: aggressive, can hurt learning by removing too much signal. Tune if you see train loss going down but eval loss going up (the textbook overfit signature).
+</div>
+
+<h3>5.8 Choosing target_modules — what each combination buys</h3>
+
+<table>
+<thead><tr><th>Choice</th><th>Trainable params</th><th>Quality</th></tr></thead>
+<tbody>
+<tr><td><code>["q_proj", "v_proj"]</code> only</td><td>~0.06% of base</td><td>Original LoRA paper. Surprisingly OK; cheapest.</td></tr>
+<tr><td>All 4 attention <code>["q_proj","k_proj","v_proj","o_proj"]</code></td><td>~0.12%</td><td>Better at relational tasks. Cheap.</td></tr>
+<tr><td>All 7 (attention + MLP)</td><td>~0.4%</td><td>Best quality, modest extra cost. The current default.</td></tr>
+</tbody>
+</table>
+
+<div class="why">
+Why MLP matters: MLPs hold most of the "knowledge" of a transformer (factual associations, learned patterns). If your fine-tuning task involves new factual knowledge or new skill patterns, MLP-LoRA helps a lot. If it's just style or format, attention-only LoRA might be enough.
+</div>
+
+<div class="change">
+Empirical finding from QLoRA and follow-ups: <strong>more modules with smaller $r$ &gt; fewer modules with bigger $r$</strong> at equal parameter budget. So if you have a budget for, say, 1M trainable params: better to do $r = 8$ on all 7 modules than $r = 64$ on just Q,V.
+</div>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 6</div>
+<h2>6. QLoRA — what 4-bit quantization actually means</h2>
+
+<h3>6.1 What is a quantized number?</h3>
+
+<p>A 32-bit float (fp32) can represent ~$2^{32}$ ≈ 4 billion distinct values, with high precision. A bf16 represents ~65,000 distinct values, with lower precision (but the same exponent range as fp32, which is why it's preferred for training). A 4-bit number can represent only $2^4 = 16$ distinct values.</p>
+
+<p>"Quantization" means: take a high-precision number and snap it to the nearest of 16 (or 256, for 8-bit) representable values. You lose information, but use far less memory.</p>
+
+<h3>6.2 Block-wise quantization with a scale</h3>
+
+<p>You can't quantize a weight in isolation if you only have 16 codes — there's no fixed mapping that works for all magnitudes. So you do it in <strong>blocks</strong>:</p>
+
+<ol>
+  <li>Take a block of 64 weights.</li>
+  <li>Find their absolute max, call it $s$ (the "scale").</li>
+  <li>Map each weight $w \in [-s, s]$ to the nearest of 16 levels by computing $\text{round}(w / s \cdot 7.5)$ — gives an integer in $[-8, 7]$.</li>
+  <li>Store: the integer (4 bits) and the scale $s$ for the block (stored once per 64 weights).</li>
+</ol>
+
+<p>When reading: $\hat{w} = \text{integer} \cdot s / 7.5$. Lossy but compact.</p>
+
+<h3>6.3 Why "NF4" — normal float 4</h3>
+
+<p>QLoRA's clever observation: a pretrained model's weights are roughly <strong>normally distributed</strong>, centered at zero. So most weights are near zero, with rare weights far from it. Evenly-spaced 4-bit codes waste precision on regions where there are few weights.</p>
+
+<div class="why">
+NF4 spaces the 16 codes according to the <em>quantiles of a standard normal distribution</em>. Code values cluster densely near zero (where most weights are) and spread out in the tails. This puts representable values where actual weights are, minimizing error.
+</div>
+
+<div class="change">
+With uniform 4-bit (16 evenly-spaced codes from $-s$ to $s$): a weight close to zero might get snapped to the nearest code, which could be relatively far away. With NF4: weights near zero have a code right next to them. NF4 produces measurably lower quantization error than int4 on normally-distributed weights.
+</div>
+
+<h3>6.4 Double quantization — quantizing the scales</h3>
+
+<p>Each block of 64 weights has its own fp32 scale. With billions of weights, those scales themselves take up nontrivial memory:</p>
+
+<ul>
+  <li>7B weights / 64 per block = 110M blocks</li>
+  <li>110M scales × 4 bytes (fp32) = 440 MB just in scales</li>
+</ul>
+
+<p>Double-quantization: quantize the scales themselves to 8-bit. Saves ~0.4 bits per weight on average.</p>
+
+<h3>6.5 Paged optimizers — what they do</h3>
+
+<p>During backward pass and the AdamW update, optimizer states have momentary spikes. Even when training "fits" in memory most of the time, these spikes can OOM the GPU.</p>
+
+<div class="why">
+QLoRA uses NVIDIA's <em>unified memory</em>: optimizer states live in CPU RAM by default. When the GPU needs them, they're paged in like virtual memory. The GPU never holds the full optimizer state at once. Trainability survives spikes that would otherwise crash. The cost is a small slowdown during paging, but the alternative is "doesn't fit at all."
+</div>
+
+<h3>6.6 The compute dtype — why bf16 even though weights are 4-bit</h3>
+
+<p>Weights are stored in 4-bit. But during the forward pass, when you actually compute $Wx$, you can't do matrix multiply in 4-bit precision — that would lose far too much. So:</p>
+
+<ol>
+  <li>For each linear layer call, dequantize a block back to bf16.</li>
+  <li>Compute $Wx$ in bf16.</li>
+  <li>Drop the bf16 weights (don't store them long-term).</li>
+</ol>
+
+<div class="meaning">
+<code>bnb_4bit_compute_dtype = bfloat16</code> means "when actually computing with these 4-bit weights, dequantize to bf16 for the math." Could be fp16, but bf16 has better numerical range and is preferred on modern GPUs.
+</div>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 7</div>
+<h2>7. RL fine-tuning — every term, every "why"</h2>
+
+<h3>7.1 What is a policy?</h3>
+
+<p>In RL terminology, a <strong>policy</strong> $\pi_\theta(\cdot \mid s)$ is anything that, given a state, gives a probability distribution over actions. <strong>Your LLM is a policy.</strong> Given a prompt (state), it gives a distribution over next tokens (actions). Sampling from it is "rolling out" the policy.</p>
+
+<h3>7.2 What is a reward?</h3>
+
+<p>A reward is just a scalar number we assign to a completed trajectory (prompt + full response) that says "how good was this?" For math problems: $+1$ if the answer matches ground truth, $0$ otherwise. For code: $+1$ if it passes tests. For RLHF: a learned reward model that scores helpfulness.</p>
+
+<div class="why">
+Why is RL needed beyond supervised fine-tuning? Because for some tasks, you don't have a "correct answer" to imitate — you have a notion of "better or worse." A math problem has many valid solution paths leading to the same answer. SFT can only show one. RL can reward <em>any</em> path that reaches the right answer, letting the model discover its own.
+</div>
+
+<h3>7.3 The objective — what we're maximizing</h3>
+
+<div class="math-block">
+$$\mathcal{J}(\pi_\theta) = \mathbb{E}_{\mathbf{q} \sim p_\mathcal{Q}}\!\Big[\mathbb{E}_{\mathbf{o} \sim \pi_\theta(\cdot \mid \mathbf{q})}[R(\mathbf{q}, \mathbf{o})] - \beta\, \mathbb{D}_{KL}\big[\pi_\theta(\cdot \mid \mathbf{q}) \| \pi_{\text{ref}}(\cdot \mid \mathbf{q})\big]\Big]$$
+</div>
+
+<div class="meaning">
+<strong>$\mathbf{q}$</strong> is a prompt sampled from your dataset $p_\mathcal{Q}$. <strong>$\mathbf{o}$</strong> is a response sampled from the current policy. <strong>$R$</strong> is the reward, a scalar. <strong>$\mathbb{D}_{KL}$</strong> is KL divergence — a measure of how different two probability distributions are. <strong>$\pi_{\text{ref}}$</strong> is a fixed reference policy (usually the SFT model you started from). <strong>$\beta$</strong> is a coefficient ≥ 0 controlling how much we penalize drifting from the reference.
+</div>
+
+<div class="why">
+The two terms balance: maximize reward, but don't run away too far from your starting model. Why care about staying near $\pi_{\text{ref}}$? Because the reward function is usually imperfect. If you let the policy maximize a learned reward model without restraint, it discovers exploits (high reward, terrible text) — this is called "reward hacking." The KL term is the leash.
+</div>
+
+<div class="change">
+$\beta = 0$ (no KL): policy is free to diverge arbitrarily. Fine for verifiable rewards (math, code) where exploitation isn't an issue. Used by R1-Zero and most reasoning-RL setups. $\beta = 0.1$: moderate penalty, common in RLHF. $\beta = 1$: very tight leash, model barely moves from reference.
+</div>
+
+<h3>7.4 The policy gradient theorem (the math behind RL updates)</h3>
+
+<p>We can't compute the gradient of an expectation directly. The "policy gradient theorem" gives us:</p>
+
+<div class="math-block">
+$$\nabla_\theta \mathbb{E}_{\mathbf{o} \sim \pi_\theta}[R(\mathbf{o})] = \mathbb{E}_{\mathbf{o} \sim \pi_\theta}\big[R(\mathbf{o}) \cdot \nabla_\theta \log \pi_\theta(\mathbf{o})\big]$$
+</div>
+
+<div class="meaning">
+Sample responses from the current policy, score them with $R$, and use that scalar to scale the gradient of the log-probability of producing that response. High-reward responses get gradient pushing the policy to produce them more often; low-reward ones get gradient pushing them less.
+</div>
+
+<div class="why">
+Why the log? Because $\nabla \pi / \pi = \nabla \log \pi$ — this trick (the "log derivative" or "REINFORCE" trick) turns an unwieldy gradient through sampling into a gradient through log-probabilities, which we can compute.
+</div>
+
+<h3>7.5 The variance problem — and why we need a baseline</h3>
+
+<p>The raw policy gradient has huge variance. Imagine all rewards are between 90 and 100. Subtracting 95 doesn't change <em>which</em> response is better — but the magnitudes of gradient updates become much smaller and more focused on differences.</p>
+
+<p>The variance-reduced estimator uses an <strong>advantage</strong> instead of raw reward:</p>
+
+<div class="math-block">
+$$\nabla_\theta \mathcal{J} = \mathbb{E}\big[\hat{A} \cdot \nabla_\theta \log \pi_\theta(\mathbf{o})\big]$$
+$$\text{where } \hat{A} = R - b \text{ for some baseline } b$$
+</div>
+
+<div class="meaning">
+$\hat{A}$ is the advantage — how much better than "average" this response was. As long as the baseline $b$ doesn't depend on the action taken, subtracting it doesn't change the <em>expected</em> gradient but greatly reduces variance.
+</div>
+
+<div class="why">
+With a baseline, a "decent" response gets near-zero gradient (it was about average, no strong signal). A great response gets large positive gradient (boost it). A bad response gets negative gradient (suppress it). This focuses learning on differences and is the foundation of all modern policy gradient methods.
+</div>
+
+<h3>7.6 PPO — what each piece does</h3>
+
+<p>PPO's objective per token:</p>
+
+<div class="math-block">
+$$\mathcal{J}_{\text{PPO}} = \mathbb{E}\left[\sum_t \min\!\Big(r_t(\theta)\hat{A}_t,\ \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t\Big)\right]$$
+$$r_t(\theta) = \frac{\pi_\theta(o_t \mid s_t)}{\pi_{\theta_{\text{old}}}(o_t \mid s_t)}$$
+</div>
+
+<div class="meaning">
+$r_t(\theta)$ is the <strong>importance ratio</strong>: how much more likely the new policy is to produce this token than the old policy. $\hat{A}_t$ is the advantage. The $\min$ and $\text{clip}$ together implement the "trust region" — don't let the policy move too far from where you last sampled.
+</div>
+
+<div class="why">
+Why the importance ratio? Because we sampled $\mathbf{o}$ from $\pi_{\theta_{\text{old}}}$, but we're updating $\pi_\theta$. The ratio re-weights the gradient to account for the mismatch. If $\pi_\theta$ has drifted far from $\pi_{\theta_{\text{old}}}$, the samples no longer represent $\pi_\theta$ well, and the gradient estimate becomes unreliable.
+</div>
+
+<div class="why">
+Why clip? If the importance ratio gets very large (the new policy puts way more weight on this token than the old), one bad estimate could give a huge gradient step. Clipping caps how much any single token can pull the policy. The $\min(\cdot, \text{clip}(\cdot))$ formula clips only when this would otherwise increase the objective unduly — it lets bad updates flow normally but caps good updates.
+</div>
+
+<div class="change">
+$\epsilon = 0.2$ is the standard. $\epsilon = 0.05$ (tight): the policy barely moves per update; you'll need many more updates. $\epsilon = 0.5$ (loose): policy can lurch wildly per step; instability returns. The value 0.2 is empirical and has held up across many RL applications.
+</div>
+
+<h3>7.7 What's a "value function" and why GRPO ditches it</h3>
+
+<p>To compute $\hat{A}_t$ — the advantage at each token — PPO uses a learned <strong>value function</strong> $V_\phi(s_t)$ that estimates "expected reward from this state onwards." Then $\hat{A}_t \approx R - V_\phi(s_t)$ (the actual return minus what we expected).</p>
+
+<div class="meaning">
+$V_\phi$ is another neural network with its own parameters $\phi$, the same size as the policy, trained alongside it. For a 70B policy, you have a 70B critic — your memory just doubled.
+</div>
+
+<div class="why">
+GRPO realized: for verifiable-reward tasks, instead of a learned baseline, sample $G$ responses to the same prompt and use the group mean as the baseline. No critic needed.
+</div>
+
+<h3>7.8 GRPO step by step</h3>
+
+<p>For each prompt $\mathbf{q}$:</p>
+
+<ol>
+  <li>Sample $G$ responses $\{\mathbf{o}_1, \ldots, \mathbf{o}_G\}$ from $\pi_{\theta_{\text{old}}}$.</li>
+  <li>Score each response with the reward function: $R_i = R(\mathbf{q}, \mathbf{o}_i)$.</li>
+  <li>Compute group-normalized advantage for response $i$:</li>
+</ol>
+
+<div class="math-block">
+$$\hat{A}_i = \frac{R_i - \text{mean}(R_1, \ldots, R_G)}{\text{std}(R_1, \ldots, R_G)}$$
+</div>
+
+<div class="meaning">
+$\hat{A}_i$ is a single scalar per response, used as the advantage for <em>every token</em> in that response. Positive means "this response was better than the average of the $G$"; negative means worse. Standardizing (subtract mean, divide by std) gives a clean zero-mean unit-variance signal.
+</div>
+
+<div class="why">
+Why divide by std? To normalize the magnitudes — without it, a prompt with rewards ranging from 0.4 to 0.6 produces tiny advantages, while one with rewards 0.0 to 1.0 produces large advantages. The std-normalization makes them comparable across prompts of different difficulty.
+</div>
+
+<h3>7.9 Dr.GRPO — the bugs in the above, and the fix</h3>
+
+<p>The Dr.GRPO paper noticed the std-normalization actually <em>introduces</em> bias rather than removing it. Here's why:</p>
+
+<h4>Bug 1: Response-length bias (the $\frac{1}{|\mathbf{o}_i|}$ in the loss)</h4>
+
+<p>In GRPO's full loss, each response's per-token loss is summed and then divided by its length: $\frac{1}{|\mathbf{o}_i|} \sum_t \ldots$. Combined with $\hat{A}_i$ being shared across all tokens of that response, this means: a response of 1000 tokens contributes only $\frac{1}{1000}$ per token. A response of 100 tokens contributes $\frac{1}{100}$ per token.</p>
+
+<div class="why">
+Why is this a bug? Imagine a correct response (positive $\hat{A}$): if it's short, each token gets a large positive gradient — the model learns "produce these short correct answers." If it's long, each token gets only a small positive gradient. So the model favors brevity on correct answers. Conversely, for incorrect responses (negative $\hat{A}$): a long wrong response has each token penalized only weakly. The model learns it's "safer to be long when wrong." Over training, this produces: correct answers get shorter, wrong answers get progressively longer. The famous "RL response length keeps growing" is partly artifact, partly real reasoning improvement.
+</div>
+
+<h4>Bug 2: Question-difficulty bias (the $\text{std}(R)$ in the denominator)</h4>
+
+<div class="why">
+For an easy question, almost all $G$ responses are correct — rewards cluster, low std → large advantages after dividing. Same for impossible questions: almost all wrong → low std → large negative advantages. For medium-difficulty questions (the most informative!), std is high → advantages are small. The model spends gradient on easy and impossible questions and neglects the medium ones, which is exactly backwards.
+</div>
+
+<h4>The Dr.GRPO fix</h4>
+
+<div class="math-block">
+$$\hat{A}_i^{\text{Dr.GRPO}} = R_i - \text{mean}(R_1, \ldots, R_G)$$
+</div>
+
+<p>And in the loss, sum over all tokens of all responses with a constant normalizer (max length) instead of per-response length normalization.</p>
+
+<div class="change">
+Remove std-normalization → eliminate difficulty bias. Remove per-response length-normalization → eliminate length bias. The result: responses don't bloat on wrong answers, and medium-difficulty problems get proper gradient attention. Token efficiency goes up, and benchmark scores at fixed training time go up.
+</div>
+
+<h3>7.10 DAPO — what each of the four tricks fixes</h3>
+
+<p>DAPO is GRPO with four practical surgeries:</p>
+
+<h4>Trick 1: Clip-Higher (asymmetric clipping)</h4>
+
+<p>Instead of clipping to $[1-\epsilon, 1+\epsilon]$, clip to $[1-\epsilon_{\text{low}}, 1+\epsilon_{\text{high}}]$ with $\epsilon_{\text{high}} > \epsilon_{\text{low}}$.</p>
+
+<div class="why">
+Symmetric clipping treats both directions equally, but their effects differ. A "high-probability-decrease" clip (lower bound) prevents over-suppressing tokens, which is fine. A "high-probability-increase" clip (upper bound) prevents the policy from confidently increasing the probability of promising-but-rare tokens — which kills exploration. Loosening the upper clip lets the policy boost low-probability tokens more aggressively when they earn high reward, preserving diversity.
+</div>
+
+<div class="meaning">
+Typical: $\epsilon_{\text{low}} = 0.2$, $\epsilon_{\text{high}} = 0.28$. Modest asymmetry, big effect on exploration.
+</div>
+
+<h4>Trick 2: Dynamic Sampling</h4>
+
+<p>If all $G$ responses to a prompt are correct (or all wrong), the group mean equals each $R_i$, so every advantage is zero. <strong>That prompt contributes no gradient to that step.</strong> Wasted compute.</p>
+
+<div class="why">
+DAPO oversamples prompts, then keeps only those whose groups have <em>at least one correct and one incorrect response</em> — i.e., informative groups. The batch is filled with prompts where the model is on the boundary of competence (the most informative regime).
+</div>
+
+<div class="change">
+Without dynamic sampling, late in training when the model has solved most easy problems, more and more prompts produce all-correct groups, and effective gradient per step plummets. Dynamic sampling keeps the gradient pipeline full.
+</div>
+
+<h4>Trick 3: Token-level policy gradient loss</h4>
+
+<p>Same as Dr.GRPO's fix for the length bias: instead of averaging losses per-response then averaging across responses (which gives short responses disproportionate weight), sum token losses over the entire batch and divide by total token count.</p>
+
+<h4>Trick 4: Overlong reward shaping</h4>
+
+<p>If a response exceeds a soft cap (e.g., max_length - 4096), apply a length-proportional negative shaping. Beyond the hard cap, truncate.</p>
+
+<div class="why">
+Without this, when the model is wrong it can generate runaway 32K-token chains. These are computationally expensive and add noise to the reward signal (a partially-correct chain gets reward 0 even if it was on the right track). Soft-shaping discourages the model from going past where it's productive.
+</div>
+
+<h3>7.11 DRA-GRPO — why diversity matters</h3>
+
+<p>Vanilla GRPO only cares about which response got which reward. It doesn't notice if 7 of 8 correct responses are essentially the same proof. <strong>The policy then collapses onto one strategy</strong>, losing the diversity needed to discover novel approaches later.</p>
+
+<div class="meaning">
+DRA-GRPO measures semantic similarity between the $G$ responses (e.g., via a sentence embedding model), then computes a redundancy penalty. Responses that are unique among the correct ones get a small reward boost; responses that are duplicates of others get downweighted.
+</div>
+
+<div class="why">
+Maintaining multiple distinct solution strategies during training keeps the policy distribution wide enough to discover combinations and generalizations. Mode collapse — converging on one strategy — is a known failure mode of RL on language tasks, especially with small $G$.
+</div>
+
+<h3>7.12 λ-GRPO — the credit assignment problem</h3>
+
+<p>In a 2000-token chain of reasoning ending in a correct answer, <em>which tokens caused the success</em>? Vanilla GRPO doesn't know — it assigns the same advantage to every token. Filler words and the actual insight get equal credit.</p>
+
+<p>Classical RL solves this with a value function and TD-learning, but GRPO threw away the value function. λ-GRPO restores partial credit assignment without a critic:</p>
+
+<div class="meaning">
+λ-GRPO uses <em>eligibility traces</em>: when a token earns reward at the end of a response, it propagates credit backward through prior tokens with a decay factor $\lambda \in [0,1]$. Tokens near the reward get most credit; tokens far back get less. Implemented via token log-probabilities as a critic-free proxy for TD error.
+</div>
+
+<div class="change">
+$\lambda = 0$: all credit to immediate tokens (very local, high bias). $\lambda = 1$: equal credit to all tokens (back to GRPO, high variance). Intermediate $\lambda$ (e.g., 0.95) blends both, getting most of the benefit of both extremes. Reported gains: 30-40% better training curves, +3-4.5 points absolute on benchmarks.
+</div>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 8</div>
+<h2>8. Hyperparameters — what each one means and what changes when you turn it</h2>
+
+<p>Every hyperparameter is a dial. Let's go through them, one by one, with what they control, default values, and the actual symptoms you'll see if they're set wrong.</p>
+
+<h3>8.1 Learning rate (LR or η)</h3>
+
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>Controls</strong></td><td>Step size of each gradient update.</td></tr>
+<tr><td><strong>Typical (full FT)</strong></td><td>1e-5 to 5e-5</td></tr>
+<tr><td><strong>Typical (LoRA/QLoRA)</strong></td><td>1e-4 to 3e-4</td></tr>
+<tr><td><strong>Typical (RL)</strong></td><td>1e-6 to 1e-5</td></tr>
+<tr><td><strong>Too high</strong></td><td>Loss spikes, NaN, training diverges. Symptom: loss jumps from 2.5 to 100 to NaN in 50 steps.</td></tr>
+<tr><td><strong>Too low</strong></td><td>Loss decreases excruciatingly slowly. Symptom: loss curve looks flat; eval not improving.</td></tr>
+<tr><td><strong>Sweet spot signal</strong></td><td>Smooth, steady decrease in loss for the first 100-500 steps.</td></tr>
+</tbody>
+</table>
+
+<div class="why">
+LoRA needs higher LR than full FT because there are fewer parameters and they start from a "smaller" state (zero $B$). The signal needs to be amplified. RL needs lower LR because the policy already produces sensible text — you're making nudges, not learning skills from scratch.
+</div>
+
+<h3>8.2 Batch size (effective)</h3>
+
+<table>
+<tbody>
+<tr><td><strong>Controls</strong></td><td>How many examples (or tokens) contribute to each gradient.</td></tr>
+<tr><td><strong>Effective = micro-batch × gradient_accumulation_steps × num_GPUs</strong></td><td></td></tr>
+<tr><td><strong>Typical SFT</strong></td><td>32-128 examples</td></tr>
+<tr><td><strong>Typical RL</strong></td><td>much larger; often 512-2048 rollouts per update</td></tr>
+<tr><td><strong>Too small</strong></td><td>Noisy gradients, loss bounces. Each update is "directionally right" on average but jittery individually.</td></tr>
+<tr><td><strong>Too large</strong></td><td>Gradients become very precise but you make fewer total updates per epoch. Diminishing returns past some point.</td></tr>
+</tbody>
+</table>
+
+<div class="why">
+The gradient you compute is an estimate of the true expected gradient. Larger batch = lower-variance estimate = each step is more reliable. But beyond a certain "critical batch size" (depends on data), variance is low enough that larger batches give no further benefit.
+</div>
+
+<h3>8.3 Warmup ratio</h3>
+
+<table>
+<tbody>
+<tr><td><strong>Controls</strong></td><td>Fraction of total steps during which LR ramps from 0 to its peak.</td></tr>
+<tr><td><strong>Typical</strong></td><td>0.03 to 0.10 (3-10% of training)</td></tr>
+<tr><td><strong>Why needed</strong></td><td>Early in training, parameters are still in their pretrained state — full LR can wreck them. Warmup eases in.</td></tr>
+<tr><td><strong>Symptom of no warmup</strong></td><td>Loss spike in first 10-50 steps before recovering, or training that diverges before recovering.</td></tr>
+</tbody>
+</table>
+
+<h3>8.4 LR schedule</h3>
+
+<table>
+<thead><tr><th>Schedule</th><th>Shape</th><th>Use when</th></tr></thead>
+<tbody>
+<tr><td>Constant</td><td>LR stays the same after warmup</td><td>Short runs, QLoRA (matches paper)</td></tr>
+<tr><td>Linear decay</td><td>LR ramps from peak down to 0</td><td>Many SFT recipes; predictable</td></tr>
+<tr><td>Cosine</td><td>LR follows half-cosine from peak to 0</td><td>Default for most modern training; slightly better than linear empirically</td></tr>
+<tr><td>Cosine w/ restarts</td><td>Cosine cycles back up periodically</td><td>Rare, mostly for very long runs</td></tr>
+</tbody>
+</table>
+
+<div class="why">
+Decaying LR helps the optimizer settle into a narrower valley near the end of training. Early on, large steps explore the landscape; later, small steps fine-tune the position. The exact decay shape matters less than the fact of decaying.
+</div>
+
+<h3>8.5 Weight decay</h3>
+
+<table>
+<tbody>
+<tr><td><strong>Controls</strong></td><td>L2 regularization on weights (penalize large weights).</td></tr>
+<tr><td><strong>Typical</strong></td><td>0.0 (LoRA), 0.01-0.1 (full FT)</td></tr>
+<tr><td><strong>Why exists</strong></td><td>Without it, weights can grow large and overfit. With it, weights stay modest.</td></tr>
+<tr><td><strong>Change effect</strong></td><td>Too high → underfits, regularizes too aggressively. Too low → may overfit.</td></tr>
+</tbody>
+</table>
+
+<div class="why">
+For LoRA, weight decay is often set to 0 because LoRA already heavily regularizes (only a few parameters, low rank constraint). Adding more would over-regularize.
+</div>
+
+<h3>8.6 Gradient clipping</h3>
+
+<table>
+<tbody>
+<tr><td><strong>Controls</strong></td><td>Cap on gradient norm. If gradient is bigger, rescale it.</td></tr>
+<tr><td><strong>Typical</strong></td><td>1.0</td></tr>
+<tr><td><strong>Why</strong></td><td>Occasional bad batches produce gradient spikes that destabilize. Clipping bounds the damage.</td></tr>
+<tr><td><strong>Change effect</strong></td><td>Lower (0.3): tighter, may over-restrict. Higher (5.0): looser, occasional instability. Disabled: rare loss spikes can crash training.</td></tr>
+</tbody>
+</table>
+
+<h3>8.7 Optimizer choice</h3>
+
+<table>
+<thead><tr><th>Optimizer</th><th>When to use</th></tr></thead>
+<tbody>
+<tr><td>AdamW (fp32 moments)</td><td>Standard. Reliable.</td></tr>
+<tr><td>AdamW 8-bit</td><td>Memory-constrained. Trades a tiny accuracy hit for ~75% optimizer memory savings.</td></tr>
+<tr><td>paged_adamw_8bit</td><td>QLoRA recipe. 8-bit AdamW + CPU paging.</td></tr>
+<tr><td>SGD with momentum</td><td>Rare for LLM fine-tuning. Sometimes used for low-LR full fine-tuning of huge models.</td></tr>
+<tr><td>Adafactor</td><td>Even more memory-efficient than 8-bit AdamW. Sometimes used at very large scale.</td></tr>
+</tbody>
+</table>
+
+<h3>8.8 Maximum sequence length</h3>
+
+<table>
+<tbody>
+<tr><td><strong>Controls</strong></td><td>Longest sequence the training pipeline processes.</td></tr>
+<tr><td><strong>Typical SFT</strong></td><td>2048 to 4096</td></tr>
+<tr><td><strong>Typical RL (long-CoT)</strong></td><td>8192 to 32768</td></tr>
+<tr><td><strong>Effect of doubling</strong></td><td>Memory cost roughly doubles, and attention cost quadruples (since attention is $O(n^2)$).</td></tr>
+<tr><td><strong>Symptom of too low</strong></td><td>Long examples get truncated, model never learns to handle them.</td></tr>
+</tbody>
+</table>
+
+<h3>8.9 LoRA-specific</h3>
+
+<table>
+<thead><tr><th>Knob</th><th>What changes when you increase</th></tr></thead>
+<tbody>
+<tr><td><code>r</code></td><td>More expressive adapter, more memory, can fit more nuanced updates. Diminishing returns past 64.</td></tr>
+<tr><td><code>lora_alpha</code></td><td>Larger updates per step. Effectively a per-LoRA learning rate multiplier.</td></tr>
+<tr><td><code>lora_dropout</code></td><td>More regularization. Use if seeing overfitting.</td></tr>
+<tr><td><code>target_modules</code></td><td>More modules = more capacity. "All linear" is the modern default.</td></tr>
+<tr><td><code>modules_to_save</code></td><td>Fully-trained modules (no LoRA, just trainable). Use when adding new tokens (train embeddings + lm_head).</td></tr>
+</tbody>
+</table>
+
+<h3>8.10 RL-specific</h3>
+
+<table>
+<thead><tr><th>Knob</th><th>What changes when you increase</th></tr></thead>
+<tbody>
+<tr><td>Group size $G$</td><td>Less noisy advantage estimates, more compute per prompt. 16 is a common sweet spot.</td></tr>
+<tr><td>Clip range $\epsilon$</td><td>Larger updates allowed per step. Faster learning, more instability risk.</td></tr>
+<tr><td>KL coefficient $\beta$</td><td>Tighter leash to reference policy. Less reward, less drift.</td></tr>
+<tr><td>Rollout temperature</td><td>More exploration during sampling. Too high → garbage rollouts. Common: 0.7-1.0.</td></tr>
+<tr><td>PPO epochs per batch</td><td>More aggressive use of rollout data. Risk of policy drifting too far from rollout policy.</td></tr>
+<tr><td>Max response length</td><td>Longer reasoning chains possible, more compute per step.</td></tr>
+</tbody>
+</table>
+
+<!-- ============================================================ -->
+<div class="part-marker">Chapter 9</div>
+<h2>9. Putting it together — a worked example end to end</h2>
+
+<p>Let's walk through fine-tuning a 7B model to be better at solving math, using QLoRA + GRPO. This is roughly the recipe DeepSeek-R1-Zero used (at much larger scale).</p>
+
+<h3>9.1 Setup</h3>
+
+<pre><code>Base model: Qwen2.5-Math-7B
+Goal: improve accuracy on AIME-style math problems
+Hardware: 1× A100 80GB
+
+# Load base model in 4-bit
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+import torch
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    "Qwen/Qwen2.5-Math-7B",
+    quantization_config=bnb_config,
+    device_map="auto",
+)
+
+# Attach LoRA adapters to all 7 linear modules
+from peft import LoraConfig, get_peft_model
+
+lora_config = LoraConfig(
+    r=32,
+    lora_alpha=64,           # 2r
+    lora_dropout=0.05,
+    target_modules=["q_proj","k_proj","v_proj","o_proj",
+                    "gate_proj","up_proj","down_proj"],
+    bias="none",
+    task_type="CAUSAL_LM",
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+# Output: trainable params: ~ 80M (1.0% of base)</code></pre>
+
+<h3>9.2 What's happening under the hood</h3>
+
+<ul>
+  <li>Base 7B weights are stored in NF4. ~3.5 GB on GPU instead of ~14 GB.</li>
+  <li>LoRA adapters in bf16: ~80M parameters × 2 bytes = 160 MB.</li>
+  <li>Gradients are computed only for LoRA params: 160 MB more.</li>
+  <li>Paged AdamW keeps optimizer state in CPU mostly: minimal GPU overhead.</li>
+  <li>Total GPU memory: roughly 6-8 GB at idle, peak around 30-40 GB during long rollouts.</li>
+</ul>
+
+<h3>9.3 GRPO training loop (conceptually)</h3>
+
+<pre><code>for step in range(num_steps):
+    prompts = sample_batch_of_math_problems(batch_size=64)
+
+    # Step 1: Generate G responses per prompt (sample rollouts)
+    all_responses = []
+    for q in prompts:
+        responses = generate(model, q, num_return_sequences=G, temperature=0.7)
+        all_responses.append(responses)
+
+    # Step 2: Score each response with rule-based verifier
+    all_rewards = []
+    for q, responses in zip(prompts, all_responses):
+        rewards = [1.0 if verify(r, ground_truth[q]) else 0.0
+                   for r in responses]
+        all_rewards.append(rewards)
+
+    # Step 3: Compute advantages (Dr.GRPO style — no std normalization)
+    advantages = []
+    for rewards in all_rewards:
+        mean_r = sum(rewards) / len(rewards)
+        advs = [r - mean_r for r in rewards]   # Dr.GRPO
+        advantages.append(advs)
+
+    # Step 4: PPO-style update with clipping
+    for ppo_epoch in range(4):
+        for q, responses, advs in zip(prompts, all_responses, advantages):
+            for response, adv in zip(responses, advs):
+                # Compute new log-probs of the same tokens
+                logp_new = compute_logprobs(model, q, response)
+                logp_old = stored_logprobs[q, response]
+
+                ratio = exp(logp_new - logp_old)
+                loss_a = ratio * adv
+                loss_b = clip(ratio, 1-0.2, 1+0.2) * adv
+                loss = -min(loss_a, loss_b).mean()
+
+                loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()</code></pre>
+
+<h3>9.4 What you'd observe</h3>
+
+<ul>
+  <li><strong>Early steps:</strong> Most rollouts get reward 0 (model is bad at hard problems). Advantages mostly slightly negative. Slow improvement.</li>
+  <li><strong>Around step 200-500:</strong> The first prompts start producing mixed rollouts (some correct, some not). Advantages have real signal. Model accuracy on eval starts climbing.</li>
+  <li><strong>Mid-training:</strong> Response length grows (sign of more reasoning, or possibly Dr.GRPO bias — depends on your loss formulation).</li>
+  <li><strong>Late training:</strong> Diminishing returns; accuracy plateaus. Some "Aha-moment" patterns emerge.</li>
+</ul>
+
+<h3>9.5 What could go wrong (and the fix)</h3>
+
+<table>
+<thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Loss is NaN early</td><td>LR too high</td><td>Drop LR 5x; add gradient clipping if missing.</td></tr>
+<tr><td>Reward stays flat at 0</td><td>Base model can't solve any problem at all; no signal</td><td>Switch to easier dataset first; or warm-start with SFT before RL.</td></tr>
+<tr><td>Reward improves, eval doesn't</td><td>Overfit to training set</td><td>Larger dataset; add LoRA dropout; reduce epochs.</td></tr>
+<tr><td>Response length explodes</td><td>GRPO length bias</td><td>Switch to Dr.GRPO normalization, or add overlong shaping.</td></tr>
+<tr><td>Most prompts produce all-correct or all-wrong groups</td><td>Difficulty distribution wrong</td><td>Dynamic sampling (DAPO style) or curate harder/easier prompts.</td></tr>
+<tr><td>Model converges to one reasoning style</td><td>Mode collapse</td><td>Increase temperature; use DRA-GRPO style diversity adjustment.</td></tr>
+</tbody>
+</table>
+
+<h3>9.6 The full picture</h3>
+
+<p>Everything we've covered now connects:</p>
+
+<ul>
+  <li><strong>The pretrained model</strong> is a transformer stack of attention + SwiGLU MLP blocks. The seven linear matrices per block are the LoRA targets.</li>
+  <li><strong>QLoRA</strong> shrinks the frozen base via NF4 quantization with double-quantization and runs LoRA adapters in bf16 on top.</li>
+  <li><strong>LoRA</strong> represents each weight update as $\frac{\alpha}{r} BA$, training only $A$ and $B$ — typically &lt;1% of parameters.</li>
+  <li><strong>SFT</strong> trains via cross-entropy on supervised examples.</li>
+  <li><strong>RL fine-tuning</strong> trains via policy gradient on samples scored by a reward.</li>
+  <li><strong>GRPO</strong> uses the group of $G$ samples per prompt as a baseline, eliminating the value model.</li>
+  <li><strong>Dr.GRPO</strong> removes two biases (length normalization and std normalization) for unbiased optimization.</li>
+  <li><strong>DAPO</strong> adds four practical tricks: clip-higher, dynamic sampling, token-level loss, overlong shaping.</li>
+  <li><strong>DRA-GRPO</strong> adds diversity awareness to prevent mode collapse.</li>
+  <li><strong>λ-GRPO</strong> adds critic-free credit assignment via eligibility traces.</li>
+  <li><strong>Hyperparameters</strong> control the size, schedule, and stability of each gradient update — and each one has a specific failure mode if mis-set.</li>
+</ul>
+
+<p>If you walked through this whole document, you now know not just <em>what</em> the formulas say, but <em>why</em> every term is there and <em>what would happen</em> if you took it out. That's enough foundation to read any modern fine-tuning paper without getting lost in notation.</p>
+
+<div class="footer">
+This is a companion to the Complete Guide to LLM Fine-Tuning. Use this document to understand the "why," then use the original guide as your quick reference. Both documents cover the same algorithms; this one is paced for first-time learners, the other is a dense reference.
+</div>
+
+</div>
+</body>
+</html>
